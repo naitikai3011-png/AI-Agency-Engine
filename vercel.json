@@ -1,0 +1,8 @@
+{
+  "buildCommand": "pnpm install --frozen-lockfile && pnpm --filter @workspace/agency-engine run build",
+  "outputDirectory": "artifacts/agency-engine/dist/public",
+  "framework": null,
+  "env": {
+    "BASE_PATH": "/"
+  }
+}
