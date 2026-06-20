@@ -4,5 +4,8 @@
   "framework": null,
   "env": {
     "BASE_PATH": "/"
-  }
+  },
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
 }
