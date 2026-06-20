@@ -110,6 +110,36 @@ export const EarnGaResponse = zod.object({
 
 
 /**
+ * Scores the provided interaction text across 4 dimensions (complexity, originality,
+depth, effort) using deterministic heuristics, then updates the user's CHS via
+EWMA blending (weight 0.3). Call this whenever the user writes or submits content.
+Creative-labor submissions automatically trigger this internally on the server.
+
+ * @summary Record a cognitive interaction and update CHS
+ */
+export const recordChsBodyTextMin = 5;
+
+
+
+export const RecordChsBody = zod.object({
+  "text": zod.string().min(recordChsBodyTextMin).describe('The interaction text to score (a prompt, submission, or reflection).'),
+  "context": zod.string().optional().describe('Optional label prepended to the text when scoring (e.g. task title).')
+})
+
+export const RecordChsResponse = zod.object({
+  "score": zod.number(),
+  "band": zod.enum(['critical', 'poor', 'fair', 'good', 'thriving']),
+  "factors": zod.object({
+  "complexity": zod.number(),
+  "originality": zod.number(),
+  "depth": zod.number(),
+  "effort": zod.number()
+}),
+  "updatedAt": zod.string()
+})
+
+
+/**
  * Returns the user's current CHS and factor breakdown
  * @summary Get current Cognitive Health Score
  */

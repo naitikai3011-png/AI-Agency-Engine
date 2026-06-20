@@ -2,9 +2,27 @@ import { ReactNode } from "react";
 import { Link } from "wouter";
 import { useClerk, useUser } from "@clerk/react";
 import { useGetMe, getGetMeQueryKey, useGetChsCurrent, getGetChsCurrentQueryKey } from "@workspace/api-client-react";
-import { Shield, Brain, Zap, LogOut, ChevronRight, Activity } from "lucide-react";
+import { Shield, Zap, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { CHSAvatar } from "@/components/chs-avatar";
+import type { ChsBand } from "@/components/chs-avatar";
+
+const HEALTH_BORDER: Record<ChsBand, string> = {
+  critical: "border-red-500 shadow-[0_0_10px_rgba(239,68,68,0.4)]",
+  poor: "border-orange-500 shadow-[0_0_10px_rgba(249,115,22,0.4)]",
+  fair: "border-yellow-500 shadow-[0_0_10px_rgba(234,179,8,0.4)]",
+  good: "border-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.4)]",
+  thriving: "border-green-500 shadow-[0_0_10px_rgba(34,197,94,0.4)]",
+};
+
+const HEALTH_TEXT: Record<ChsBand, string> = {
+  critical: "text-red-500",
+  poor: "text-orange-500",
+  fair: "text-yellow-500",
+  good: "text-blue-500",
+  thriving: "text-green-500",
+};
 
 export default function Layout({ children }: { children: ReactNode }) {
   const { signOut } = useClerk();
@@ -12,16 +30,9 @@ export default function Layout({ children }: { children: ReactNode }) {
   const { data: me, isLoading: isLoadingMe } = useGetMe({ query: { queryKey: getGetMeQueryKey() } });
   const { data: chs, isLoading: isLoadingChs } = useGetChsCurrent({ query: { queryKey: getGetChsCurrentQueryKey() } });
 
-  const getHealthColor = (band: string | undefined) => {
-    switch(band) {
-      case "critical": return "text-red-500 border-red-500 shadow-[0_0_10px_rgba(239,68,68,0.5)]";
-      case "poor": return "text-orange-500 border-orange-500 shadow-[0_0_10px_rgba(249,115,22,0.5)]";
-      case "fair": return "text-yellow-500 border-yellow-500 shadow-[0_0_10px_rgba(234,179,8,0.5)]";
-      case "good": return "text-blue-500 border-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.5)]";
-      case "thriving": return "text-green-500 border-green-500 shadow-[0_0_10px_rgba(34,197,94,0.5)]";
-      default: return "text-muted-foreground border-muted";
-    }
-  };
+  const band: ChsBand = (chs?.band as ChsBand) ?? "fair";
+  const borderClass = HEALTH_BORDER[band];
+  const textClass = HEALTH_TEXT[band];
 
   return (
     <div className="min-h-[100dvh] flex flex-col bg-background text-foreground font-mono">
@@ -35,22 +46,35 @@ export default function Layout({ children }: { children: ReactNode }) {
           </Link>
 
           <div className="flex items-center gap-4 sm:gap-6">
-            <Link href="/earn" className="flex items-center gap-2 px-3 py-1.5 border-2 border-primary/50 bg-primary/5 hover:bg-primary/20 hover:border-primary transition-all rounded-none outline-none">
+            {/* GA Balance */}
+            <Link
+              href="/earn"
+              className="flex items-center gap-2 px-3 py-1.5 border-2 border-primary/50 bg-primary/5 hover:bg-primary/20 hover:border-primary transition-all rounded-none outline-none"
+            >
               <Zap className="w-4 h-4 text-primary" />
               <div className="flex flex-col">
                 <span className="text-[10px] text-primary/70 uppercase leading-none">GA Balance</span>
-                <span className="font-bold text-primary leading-tight shadow-primary">
-                  {isLoadingMe ? <Skeleton className="h-4 w-12 bg-primary/20" /> : me?.gaBalance?.toLocaleString() ?? 0}
+                <span className="font-bold text-primary leading-tight">
+                  {isLoadingMe ? <Skeleton className="h-4 w-12 bg-primary/20" /> : (me?.gaBalance?.toLocaleString() ?? 0)}
                 </span>
               </div>
             </Link>
 
-            <Link href="/mirror" className={`flex items-center gap-2 px-3 py-1.5 border-2 transition-all rounded-none outline-none bg-card ${getHealthColor(chs?.band)}`}>
-              <Activity className="w-4 h-4" />
+            {/* CHS mini avatar widget */}
+            <Link
+              href="/mirror"
+              className={`flex items-center gap-2 px-2 py-1 border-2 bg-card transition-all rounded-none outline-none ${borderClass}`}
+              title={`Cognitive Health Score: ${chs?.score ?? "..."} (${band})`}
+            >
+              {isLoadingChs ? (
+                <Skeleton className="w-7 h-7" />
+              ) : (
+                <CHSAvatar band={band} mini />
+              )}
               <div className="flex flex-col">
-                <span className="text-[10px] uppercase leading-none opacity-70">CHS Score</span>
-                <span className="font-bold leading-tight">
-                  {isLoadingChs ? <Skeleton className="h-4 w-8 bg-current opacity-20" /> : chs?.score ?? 0}
+                <span className="text-[10px] uppercase leading-none opacity-60">CHS</span>
+                <span className={`font-bold leading-tight text-sm ${textClass}`}>
+                  {isLoadingChs ? <Skeleton className="h-4 w-8 bg-current opacity-20" /> : (chs?.score ?? 0)}
                 </span>
               </div>
             </Link>
@@ -59,8 +83,8 @@ export default function Layout({ children }: { children: ReactNode }) {
               <div className="hidden sm:flex flex-col items-end">
                 <span className="text-xs text-muted-foreground uppercase">{user?.emailAddresses[0]?.emailAddress}</span>
               </div>
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 size="icon"
                 className="rounded-none border-2 border-border hover:bg-destructive/10 hover:text-destructive hover:border-destructive transition-colors"
                 onClick={() => signOut({ redirectUrl: import.meta.env.BASE_URL.replace(/\/$/, "") || "/" })}

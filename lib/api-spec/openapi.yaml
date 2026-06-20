@@ -151,6 +151,34 @@ paths:
         "401":
           description: Unauthorized
 
+  /chs/record:
+    post:
+      operationId: recordChs
+      tags: [chs]
+      summary: Record a cognitive interaction and update CHS
+      description: |
+        Scores the provided interaction text across 4 dimensions (complexity, originality,
+        depth, effort) using deterministic heuristics, then updates the user's CHS via
+        EWMA blending (weight 0.3). Call this whenever the user writes or submits content.
+        Creative-labor submissions automatically trigger this internally on the server.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RecordChsRequest"
+      responses:
+        "200":
+          description: Updated CHS after recording the interaction
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChsScore"
+        "400":
+          description: Invalid request (text too short)
+        "401":
+          description: Unauthorized
+
   /chs/current:
     get:
       operationId: getChsCurrent
@@ -342,6 +370,19 @@ components:
           description: ID of a passing creative-labor or human-task submission. Single-use — once credited this call returns 400.
       required:
         - submissionId
+
+    RecordChsRequest:
+      type: object
+      properties:
+        text:
+          type: string
+          minLength: 5
+          description: The interaction text to score (a prompt, submission, or reflection).
+        context:
+          type: string
+          description: Optional label prepended to the text when scoring (e.g. task title).
+      required:
+        - text
 
     ChsScore:
       type: object

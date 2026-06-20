@@ -63,6 +63,16 @@ export interface EarnGaRequest {
   submissionId: number;
 }
 
+export interface RecordChsRequest {
+  /**
+     * The interaction text to score (a prompt, submission, or reflection).
+     * @minLength 5
+     */
+  text: string;
+  /** Optional label prepended to the text when scoring (e.g. task title). */
+  context?: string;
+}
+
 export type ChsScoreBand = typeof ChsScoreBand[keyof typeof ChsScoreBand];
 
 

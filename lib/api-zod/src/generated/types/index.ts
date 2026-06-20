@@ -18,6 +18,7 @@ export * from './earnGaRequest';
 export * from './gaBalance';
 export * from './gaLedgerEntry';
 export * from './healthStatus';
+export * from './recordChsRequest';
 export * from './spendGaRequest';
 export * from './submitCreativeLaborRequest';
 export * from './userProfile';

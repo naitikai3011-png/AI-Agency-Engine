@@ -4,6 +4,7 @@ import { db, creativeLaborSubmissionsTable, creativeLaborTaskTemplatesTable } fr
 import { requireAuth } from "../middlewares/requireAuth";
 import { getOrCreateUser } from "../lib/userSync";
 import { openai } from "@workspace/integrations-openai-ai-server";
+import { recordInteraction } from "../lib/chsEngine";
 
 const router: IRouter = Router();
 
@@ -148,6 +149,10 @@ Evaluate and return JSON verdict.`;
         credited: false,
       })
       .returning();
+
+    // Fire-and-forget CHS update — doesn't affect submission response
+    recordInteraction(user.clerkId, trimmedContent, `Creative Labor: ${task.title}`)
+      .catch((err) => console.error("CHS record error after submission:", err));
 
     res.json({
       passed,

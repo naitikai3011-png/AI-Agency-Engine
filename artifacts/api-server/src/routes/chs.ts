@@ -3,10 +3,11 @@ import { eq, desc, sql } from "drizzle-orm";
 import { db, chsSnapshotsTable } from "@workspace/db";
 import { requireAuth } from "../middlewares/requireAuth";
 import { getOrCreateUser } from "../lib/userSync";
+import { recordInteraction } from "../lib/chsEngine";
 
 const router: IRouter = Router();
 
-function getChsBand(score: number): "critical" | "poor" | "fair" | "good" | "thriving" {
+export function getChsBand(score: number): "critical" | "poor" | "fair" | "good" | "thriving" {
   if (score <= 20) return "critical";
   if (score <= 40) return "poor";
   if (score <= 60) return "fair";
@@ -16,29 +17,24 @@ function getChsBand(score: number): "critical" | "poor" | "fair" | "good" | "thr
 
 router.get("/chs/current", requireAuth, async (req, res): Promise<void> => {
   const user = await getOrCreateUser(req);
-  if (!user) {
-    res.status(401).json({ error: "Unauthorized" });
-    return;
-  }
+  if (!user) { res.status(401).json({ error: "Unauthorized" }); return; }
 
-  const latest = await db
+  const [latest] = await db
     .select()
     .from(chsSnapshotsTable)
     .where(eq(chsSnapshotsTable.userId, user.clerkId))
     .orderBy(desc(chsSnapshotsTable.createdAt))
     .limit(1);
 
-  if (latest.length === 0) {
-    const defaultFactors = { complexity: 50, originality: 50, depth: 50, effort: 50 };
+  if (!latest) {
     const [snapshot] = await db
       .insert(chsSnapshotsTable)
       .values({
         userId: user.clerkId,
         score: 50,
-        factorsJson: defaultFactors,
+        factorsJson: { complexity: 50, originality: 50, depth: 50, effort: 50 },
       })
       .returning();
-
     res.json({
       score: snapshot.score,
       band: getChsBand(snapshot.score),
@@ -48,23 +44,18 @@ router.get("/chs/current", requireAuth, async (req, res): Promise<void> => {
     return;
   }
 
-  const snapshot = latest[0];
-  const factors = snapshot.factorsJson as { complexity: number; originality: number; depth: number; effort: number };
-
+  const factors = latest.factorsJson as { complexity: number; originality: number; depth: number; effort: number };
   res.json({
-    score: snapshot.score,
-    band: getChsBand(snapshot.score),
+    score: latest.score,
+    band: getChsBand(latest.score),
     factors,
-    updatedAt: snapshot.createdAt.toISOString(),
+    updatedAt: latest.createdAt.toISOString(),
   });
 });
 
 router.get("/chs/history", requireAuth, async (req, res): Promise<void> => {
   const user = await getOrCreateUser(req);
-  if (!user) {
-    res.status(401).json({ error: "Unauthorized" });
-    return;
-  }
+  if (!user) { res.status(401).json({ error: "Unauthorized" }); return; }
 
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
@@ -82,6 +73,33 @@ router.get("/chs/history", requireAuth, async (req, res): Promise<void> => {
     .orderBy(sql`date_trunc('day', ${chsSnapshotsTable.createdAt})`);
 
   res.json(rows);
+});
+
+/**
+ * POST /chs/record
+ *
+ * Scores a user-provided interaction text across 4 cognitive dimensions
+ * (complexity, originality, depth, effort) and updates the user's CHS via
+ * EWMA blending. Call this whenever the user writes/submits content to the app.
+ */
+router.post("/chs/record", requireAuth, async (req, res): Promise<void> => {
+  const user = await getOrCreateUser(req);
+  if (!user) { res.status(401).json({ error: "Unauthorized" }); return; }
+
+  const { text, context } = req.body as { text?: string; context?: string };
+  if (!text || typeof text !== "string" || text.trim().length < 5) {
+    res.status(400).json({ error: "text is required (minimum 5 characters)" });
+    return;
+  }
+
+  const { score, factors } = await recordInteraction(user.clerkId, text, context);
+
+  res.json({
+    score,
+    band: getChsBand(score),
+    factors,
+    updatedAt: new Date().toISOString(),
+  });
 });
 
 export default router;

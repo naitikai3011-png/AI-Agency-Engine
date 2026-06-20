@@ -29,6 +29,7 @@ import type {
   GaBalance,
   GaLedgerEntry,
   HealthStatus,
+  RecordChsRequest,
   SpendGaRequest,
   SubmitCreativeLaborRequest,
   UserProfile
@@ -582,6 +583,82 @@ export const useEarnGa = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getEarnGaMutationOptions(options));
+    }
+
+export const getRecordChsUrl = () => {
+
+
+
+
+  return `/api/chs/record`
+}
+
+/**
+ * Scores the provided interaction text across 4 dimensions (complexity, originality,
+depth, effort) using deterministic heuristics, then updates the user's CHS via
+EWMA blending (weight 0.3). Call this whenever the user writes or submits content.
+Creative-labor submissions automatically trigger this internally on the server.
+
+ * @summary Record a cognitive interaction and update CHS
+ */
+export const recordChs = async (recordChsRequest: RecordChsRequest, options?: RequestInit): Promise<ChsScore> => {
+
+  return customFetch<ChsScore>(getRecordChsUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      recordChsRequest,)
+  }
+);}
+
+
+
+
+export const getRecordChsMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof recordChs>>, TError,{data: BodyType<RecordChsRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof recordChs>>, TError,{data: BodyType<RecordChsRequest>}, TContext> => {
+
+const mutationKey = ['recordChs'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof recordChs>>, {data: BodyType<RecordChsRequest>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  recordChs(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RecordChsMutationResult = NonNullable<Awaited<ReturnType<typeof recordChs>>>
+    export type RecordChsMutationBody = BodyType<RecordChsRequest>
+    export type RecordChsMutationError = ErrorType<void>
+
+    /**
+ * @summary Record a cognitive interaction and update CHS
+ */
+export const useRecordChs = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof recordChs>>, TError,{data: BodyType<RecordChsRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof recordChs>>,
+        TError,
+        {data: BodyType<RecordChsRequest>},
+        TContext
+      > => {
+      return useMutation(getRecordChsMutationOptions(options));
     }
 
 export const getGetChsCurrentUrl = () => {
