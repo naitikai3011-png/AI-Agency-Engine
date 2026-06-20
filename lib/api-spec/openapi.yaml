@@ -123,28 +123,6 @@ paths:
         "401":
           description: Unauthorized
 
-  /ga/earn:
-    post:
-      operationId: earnGa
-      tags: [ga]
-      summary: Earn GA tokens
-      description: Credits GA tokens to the user's balance after verified creative labor
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/EarnGaRequest"
-      responses:
-        "200":
-          description: Updated GA balance
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/GaBalance"
-        "401":
-          description: Unauthorized
-
   /chs/current:
     get:
       operationId: getChsCurrent
@@ -315,18 +293,6 @@ components:
         - createdAt
 
     SpendGaRequest:
-      type: object
-      properties:
-        amount:
-          type: integer
-          minimum: 1
-        reason:
-          type: string
-      required:
-        - amount
-        - reason
-
-    EarnGaRequest:
       type: object
       properties:
         amount:

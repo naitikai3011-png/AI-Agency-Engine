@@ -14,7 +14,6 @@ export * from './creativeLaborTask';
 export * from './creativeLaborVerdict';
 export * from './dashboardStats';
 export * from './dashboardStatsChsTrend';
-export * from './earnGaRequest';
 export * from './gaBalance';
 export * from './gaLedgerEntry';
 export * from './healthStatus';

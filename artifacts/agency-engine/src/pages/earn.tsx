@@ -7,6 +7,7 @@ import {
   getGetGaHistoryQueryKey,
   useGetCreativeLaborTasks,
   getGetCreativeLaborTasksQueryKey,
+  getGetMeQueryKey,
 } from "@workspace/api-client-react";
 import type { CreativeLaborTask, CreativeLaborVerdict } from "@workspace/api-client-react";
 import { Zap, Clock, Code, PenTool, Lightbulb, History, ChevronRight, ChevronLeft, CheckCircle, XCircle, Loader2, AlertTriangle } from "lucide-react";
@@ -81,6 +82,7 @@ export default function Earn() {
       if (result.passed && result.gaRewarded > 0) {
         await queryClient.invalidateQueries({ queryKey: getGetGaBalanceQueryKey() });
         await queryClient.invalidateQueries({ queryKey: getGetGaHistoryQueryKey() });
+        await queryClient.invalidateQueries({ queryKey: getGetMeQueryKey() });
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");

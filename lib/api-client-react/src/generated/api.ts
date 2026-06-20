@@ -25,7 +25,6 @@ import type {
   CreativeLaborTask,
   CreativeLaborVerdict,
   DashboardStats,
-  EarnGaRequest,
   GaBalance,
   GaLedgerEntry,
   HealthStatus,
@@ -506,78 +505,6 @@ export const useSpendGa = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getSpendGaMutationOptions(options));
-    }
-
-export const getEarnGaUrl = () => {
-
-
-
-
-  return `/api/ga/earn`
-}
-
-/**
- * Credits GA tokens to the user's balance after verified creative labor
- * @summary Earn GA tokens
- */
-export const earnGa = async (earnGaRequest: EarnGaRequest, options?: RequestInit): Promise<GaBalance> => {
-
-  return customFetch<GaBalance>(getEarnGaUrl(),
-  {
-    ...options,
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(
-      earnGaRequest,)
-  }
-);}
-
-
-
-
-export const getEarnGaMutationOptions = <TError = ErrorType<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof earnGa>>, TError,{data: BodyType<EarnGaRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof earnGa>>, TError,{data: BodyType<EarnGaRequest>}, TContext> => {
-
-const mutationKey = ['earnGa'];
-const {mutation: mutationOptions, request: requestOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
-
-
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof earnGa>>, {data: BodyType<EarnGaRequest>}> = (props) => {
-          const {data} = props ?? {};
-
-          return  earnGa(data,requestOptions)
-        }
-
-
-
-
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type EarnGaMutationResult = NonNullable<Awaited<ReturnType<typeof earnGa>>>
-    export type EarnGaMutationBody = BodyType<EarnGaRequest>
-    export type EarnGaMutationError = ErrorType<void>
-
-    /**
- * @summary Earn GA tokens
- */
-export const useEarnGa = <TError = ErrorType<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof earnGa>>, TError,{data: BodyType<EarnGaRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
- ): UseMutationResult<
-        Awaited<ReturnType<typeof earnGa>>,
-        TError,
-        {data: BodyType<EarnGaRequest>},
-        TContext
-      > => {
-      return useMutation(getEarnGaMutationOptions(options));
     }
 
 export const getGetChsCurrentUrl = () => {
