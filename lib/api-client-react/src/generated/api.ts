@@ -6,11 +6,15 @@
  * OpenAPI spec version: 0.1.0
  */
 import {
+  useMutation,
   useQuery
 } from '@tanstack/react-query';
 import type {
+  MutationFunction,
   QueryFunction,
   QueryKey,
+  UseMutationOptions,
+  UseMutationResult,
   UseQueryOptions,
   UseQueryResult
 } from '@tanstack/react-query';
@@ -18,15 +22,20 @@ import type {
 import type {
   ChsHistoryPoint,
   ChsScore,
+  CreativeLaborTask,
+  CreativeLaborVerdict,
   DashboardStats,
+  EarnGaRequest,
   GaBalance,
   GaLedgerEntry,
   HealthStatus,
+  SpendGaRequest,
+  SubmitCreativeLaborRequest,
   UserProfile
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
-import type { ErrorType } from '../custom-fetch';
+import type { ErrorType , BodyType } from '../custom-fetch';
 
 type AwaitedInput<T> = PromiseLike<T> | T;
 
@@ -427,6 +436,150 @@ export function useGetGaHistory<TData = Awaited<ReturnType<typeof getGaHistory>>
 
 
 
+export const getSpendGaUrl = () => {
+
+
+
+
+  return `/api/ga/spend`
+}
+
+/**
+ * Deducts GA tokens from the user's balance for an AI query
+ * @summary Spend GA tokens
+ */
+export const spendGa = async (spendGaRequest: SpendGaRequest, options?: RequestInit): Promise<GaBalance> => {
+
+  return customFetch<GaBalance>(getSpendGaUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      spendGaRequest,)
+  }
+);}
+
+
+
+
+export const getSpendGaMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof spendGa>>, TError,{data: BodyType<SpendGaRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof spendGa>>, TError,{data: BodyType<SpendGaRequest>}, TContext> => {
+
+const mutationKey = ['spendGa'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof spendGa>>, {data: BodyType<SpendGaRequest>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  spendGa(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SpendGaMutationResult = NonNullable<Awaited<ReturnType<typeof spendGa>>>
+    export type SpendGaMutationBody = BodyType<SpendGaRequest>
+    export type SpendGaMutationError = ErrorType<void>
+
+    /**
+ * @summary Spend GA tokens
+ */
+export const useSpendGa = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof spendGa>>, TError,{data: BodyType<SpendGaRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof spendGa>>,
+        TError,
+        {data: BodyType<SpendGaRequest>},
+        TContext
+      > => {
+      return useMutation(getSpendGaMutationOptions(options));
+    }
+
+export const getEarnGaUrl = () => {
+
+
+
+
+  return `/api/ga/earn`
+}
+
+/**
+ * Credits GA tokens to the user's balance after verified creative labor
+ * @summary Earn GA tokens
+ */
+export const earnGa = async (earnGaRequest: EarnGaRequest, options?: RequestInit): Promise<GaBalance> => {
+
+  return customFetch<GaBalance>(getEarnGaUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      earnGaRequest,)
+  }
+);}
+
+
+
+
+export const getEarnGaMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof earnGa>>, TError,{data: BodyType<EarnGaRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof earnGa>>, TError,{data: BodyType<EarnGaRequest>}, TContext> => {
+
+const mutationKey = ['earnGa'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof earnGa>>, {data: BodyType<EarnGaRequest>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  earnGa(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type EarnGaMutationResult = NonNullable<Awaited<ReturnType<typeof earnGa>>>
+    export type EarnGaMutationBody = BodyType<EarnGaRequest>
+    export type EarnGaMutationError = ErrorType<void>
+
+    /**
+ * @summary Earn GA tokens
+ */
+export const useEarnGa = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof earnGa>>, TError,{data: BodyType<EarnGaRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof earnGa>>,
+        TError,
+        {data: BodyType<EarnGaRequest>},
+        TContext
+      > => {
+      return useMutation(getEarnGaMutationOptions(options));
+    }
+
 export const getGetChsCurrentUrl = () => {
 
 
@@ -582,4 +735,154 @@ export function useGetChsHistory<TData = Awaited<ReturnType<typeof getChsHistory
 
 
 
+
+export const getGetCreativeLaborTasksUrl = () => {
+
+
+
+
+  return `/api/creative-labor/tasks`
+}
+
+/**
+ * Returns the list of task templates available for completion
+ * @summary Get available creative labor tasks
+ */
+export const getCreativeLaborTasks = async ( options?: RequestInit): Promise<CreativeLaborTask[]> => {
+
+  return customFetch<CreativeLaborTask[]>(getGetCreativeLaborTasksUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetCreativeLaborTasksQueryKey = () => {
+    return [
+    `/api/creative-labor/tasks`
+    ] as const;
+    }
+
+
+export const getGetCreativeLaborTasksQueryOptions = <TData = Awaited<ReturnType<typeof getCreativeLaborTasks>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCreativeLaborTasks>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetCreativeLaborTasksQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getCreativeLaborTasks>>> = ({ signal }) => getCreativeLaborTasks({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getCreativeLaborTasks>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetCreativeLaborTasksQueryResult = NonNullable<Awaited<ReturnType<typeof getCreativeLaborTasks>>>
+export type GetCreativeLaborTasksQueryError = ErrorType<void>
+
+
+/**
+ * @summary Get available creative labor tasks
+ */
+
+export function useGetCreativeLaborTasks<TData = Awaited<ReturnType<typeof getCreativeLaborTasks>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCreativeLaborTasks>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetCreativeLaborTasksQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getSubmitCreativeLaborUrl = () => {
+
+
+
+
+  return `/api/creative-labor/submit`
+}
+
+/**
+ * Sends the user's submission to an AI evaluator which scores it and awards GA tokens on success
+ * @summary Submit creative labor for AI evaluation
+ */
+export const submitCreativeLabor = async (submitCreativeLaborRequest: SubmitCreativeLaborRequest, options?: RequestInit): Promise<CreativeLaborVerdict> => {
+
+  return customFetch<CreativeLaborVerdict>(getSubmitCreativeLaborUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      submitCreativeLaborRequest,)
+  }
+);}
+
+
+
+
+export const getSubmitCreativeLaborMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof submitCreativeLabor>>, TError,{data: BodyType<SubmitCreativeLaborRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof submitCreativeLabor>>, TError,{data: BodyType<SubmitCreativeLaborRequest>}, TContext> => {
+
+const mutationKey = ['submitCreativeLabor'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof submitCreativeLabor>>, {data: BodyType<SubmitCreativeLaborRequest>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  submitCreativeLabor(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SubmitCreativeLaborMutationResult = NonNullable<Awaited<ReturnType<typeof submitCreativeLabor>>>
+    export type SubmitCreativeLaborMutationBody = BodyType<SubmitCreativeLaborRequest>
+    export type SubmitCreativeLaborMutationError = ErrorType<void>
+
+    /**
+ * @summary Submit creative labor for AI evaluation
+ */
+export const useSubmitCreativeLabor = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof submitCreativeLabor>>, TError,{data: BodyType<SubmitCreativeLaborRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof submitCreativeLabor>>,
+        TError,
+        {data: BodyType<SubmitCreativeLaborRequest>},
+        TContext
+      > => {
+      return useMutation(getSubmitCreativeLaborMutationOptions(options));
+    }
 

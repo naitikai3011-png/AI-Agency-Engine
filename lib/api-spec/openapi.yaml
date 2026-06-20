@@ -16,6 +16,8 @@ tags:
     description: Genius Answer token management
   - name: chs
     description: Cognitive Health Score
+  - name: creative-labor
+    description: Creative labor tasks and AI evaluation
 paths:
   /healthz:
     get:
@@ -97,6 +99,52 @@ paths:
         "401":
           description: Unauthorized
 
+  /ga/spend:
+    post:
+      operationId: spendGa
+      tags: [ga]
+      summary: Spend GA tokens
+      description: Deducts GA tokens from the user's balance for an AI query
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SpendGaRequest"
+      responses:
+        "200":
+          description: Updated GA balance
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GaBalance"
+        "400":
+          description: Insufficient balance or invalid amount
+        "401":
+          description: Unauthorized
+
+  /ga/earn:
+    post:
+      operationId: earnGa
+      tags: [ga]
+      summary: Earn GA tokens
+      description: Credits GA tokens to the user's balance after verified creative labor
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EarnGaRequest"
+      responses:
+        "200":
+          description: Updated GA balance
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GaBalance"
+        "401":
+          description: Unauthorized
+
   /chs/current:
     get:
       operationId: getChsCurrent
@@ -128,6 +176,48 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/ChsHistoryPoint"
+        "401":
+          description: Unauthorized
+
+  /creative-labor/tasks:
+    get:
+      operationId: getCreativeLaborTasks
+      tags: [creative-labor]
+      summary: Get available creative labor tasks
+      description: Returns the list of task templates available for completion
+      responses:
+        "200":
+          description: List of creative labor tasks
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CreativeLaborTask"
+        "401":
+          description: Unauthorized
+
+  /creative-labor/submit:
+    post:
+      operationId: submitCreativeLabor
+      tags: [creative-labor]
+      summary: Submit creative labor for AI evaluation
+      description: Sends the user's submission to an AI evaluator which scores it and awards GA tokens on success
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SubmitCreativeLaborRequest"
+      responses:
+        "200":
+          description: Evaluation verdict
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreativeLaborVerdict"
+        "400":
+          description: Invalid submission
         "401":
           description: Unauthorized
 
@@ -224,6 +314,30 @@ components:
         - reason
         - createdAt
 
+    SpendGaRequest:
+      type: object
+      properties:
+        amount:
+          type: integer
+          minimum: 1
+        reason:
+          type: string
+      required:
+        - amount
+        - reason
+
+    EarnGaRequest:
+      type: object
+      properties:
+        amount:
+          type: integer
+          minimum: 1
+        reason:
+          type: string
+      required:
+        - amount
+        - reason
+
     ChsScore:
       type: object
       properties:
@@ -269,3 +383,61 @@ components:
       required:
         - date
         - averageScore
+
+    CreativeLaborTask:
+      type: object
+      properties:
+        id:
+          type: integer
+        slug:
+          type: string
+        type:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        instructions:
+          type: string
+        gaReward:
+          type: integer
+      required:
+        - id
+        - slug
+        - type
+        - title
+        - description
+        - instructions
+        - gaReward
+
+    SubmitCreativeLaborRequest:
+      type: object
+      properties:
+        taskSlug:
+          type: string
+        content:
+          type: string
+          minLength: 10
+      required:
+        - taskSlug
+        - content
+
+    CreativeLaborVerdict:
+      type: object
+      properties:
+        passed:
+          type: boolean
+        qualityNotes:
+          type: string
+        gaRewarded:
+          type: integer
+        newBalance:
+          type: integer
+        submissionId:
+          type: integer
+      required:
+        - passed
+        - qualityNotes
+        - gaRewarded
+        - newBalance
+        - submissionId

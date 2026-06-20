@@ -52,6 +52,18 @@ export interface GaLedgerEntry {
   createdAt: string;
 }
 
+export interface SpendGaRequest {
+  /** @minimum 1 */
+  amount: number;
+  reason: string;
+}
+
+export interface EarnGaRequest {
+  /** @minimum 1 */
+  amount: number;
+  reason: string;
+}
+
 export type ChsScoreBand = typeof ChsScoreBand[keyof typeof ChsScoreBand];
 
 
@@ -80,5 +92,29 @@ export interface ChsScore {
 export interface ChsHistoryPoint {
   date: string;
   averageScore: number;
+}
+
+export interface CreativeLaborTask {
+  id: number;
+  slug: string;
+  type: string;
+  title: string;
+  description: string;
+  instructions: string;
+  gaReward: number;
+}
+
+export interface SubmitCreativeLaborRequest {
+  taskSlug: string;
+  /** @minLength 10 */
+  content: string;
+}
+
+export interface CreativeLaborVerdict {
+  passed: boolean;
+  qualityNotes: string;
+  gaRewarded: number;
+  newBalance: number;
+  submissionId: number;
 }
 

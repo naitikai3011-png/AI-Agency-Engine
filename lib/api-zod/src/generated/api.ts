@@ -72,6 +72,44 @@ export const GetGaHistoryResponse = zod.array(GetGaHistoryResponseItem)
 
 
 /**
+ * Deducts GA tokens from the user's balance for an AI query
+ * @summary Spend GA tokens
+ */
+
+
+
+export const SpendGaBody = zod.object({
+  "amount": zod.number().min(1),
+  "reason": zod.string()
+})
+
+export const SpendGaResponse = zod.object({
+  "balance": zod.number(),
+  "dailyAllowance": zod.number(),
+  "lastResetAt": zod.string()
+})
+
+
+/**
+ * Credits GA tokens to the user's balance after verified creative labor
+ * @summary Earn GA tokens
+ */
+
+
+
+export const EarnGaBody = zod.object({
+  "amount": zod.number().min(1),
+  "reason": zod.string()
+})
+
+export const EarnGaResponse = zod.object({
+  "balance": zod.number(),
+  "dailyAllowance": zod.number(),
+  "lastResetAt": zod.string()
+})
+
+
+/**
  * Returns the user's current CHS and factor breakdown
  * @summary Get current Cognitive Health Score
  */
@@ -97,5 +135,43 @@ export const GetChsHistoryResponseItem = zod.object({
   "averageScore": zod.number()
 })
 export const GetChsHistoryResponse = zod.array(GetChsHistoryResponseItem)
+
+
+/**
+ * Returns the list of task templates available for completion
+ * @summary Get available creative labor tasks
+ */
+export const GetCreativeLaborTasksResponseItem = zod.object({
+  "id": zod.number(),
+  "slug": zod.string(),
+  "type": zod.string(),
+  "title": zod.string(),
+  "description": zod.string(),
+  "instructions": zod.string(),
+  "gaReward": zod.number()
+})
+export const GetCreativeLaborTasksResponse = zod.array(GetCreativeLaborTasksResponseItem)
+
+
+/**
+ * Sends the user's submission to an AI evaluator which scores it and awards GA tokens on success
+ * @summary Submit creative labor for AI evaluation
+ */
+export const submitCreativeLaborBodyContentMin = 10;
+
+
+
+export const SubmitCreativeLaborBody = zod.object({
+  "taskSlug": zod.string(),
+  "content": zod.string().min(submitCreativeLaborBodyContentMin)
+})
+
+export const SubmitCreativeLaborResponse = zod.object({
+  "passed": zod.boolean(),
+  "qualityNotes": zod.string(),
+  "gaRewarded": zod.number(),
+  "newBalance": zod.number(),
+  "submissionId": zod.number()
+})
 
 
