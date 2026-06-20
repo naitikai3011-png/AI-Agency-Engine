@@ -91,25 +91,6 @@ export const SpendGaResponse = zod.object({
 
 
 /**
- * Credits GA tokens to the user's balance after a verified human task. Amount is capped at the user's daily allowance per call.
- * @summary Earn GA tokens
- */
-
-
-
-export const EarnGaBody = zod.object({
-  "amount": zod.number().min(1),
-  "reason": zod.string()
-})
-
-export const EarnGaResponse = zod.object({
-  "balance": zod.number(),
-  "dailyAllowance": zod.number(),
-  "lastResetAt": zod.string()
-})
-
-
-/**
  * Returns the user's current CHS and factor breakdown
  * @summary Get current Cognitive Health Score
  */
@@ -154,8 +135,11 @@ export const GetCreativeLaborTasksResponse = zod.array(GetCreativeLaborTasksResp
 
 
 /**
- * Sends the user's submission to an AI evaluator which scores it and awards GA tokens on success
- * @summary Submit creative labor for AI evaluation
+ * Sends the user's submission to an AI evaluator which scores it against task criteria.
+On a passing verdict, GA tokens are credited to the user's balance atomically in the same
+transaction — this is the sole verified path for earning GA tokens through creative labor.
+
+ * @summary Submit creative labor for AI evaluation and token award
  */
 export const submitCreativeLaborBodyContentMin = 10;
 

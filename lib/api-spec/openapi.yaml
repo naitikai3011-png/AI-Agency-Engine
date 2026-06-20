@@ -17,7 +17,7 @@ tags:
   - name: chs
     description: Cognitive Health Score
   - name: creative-labor
-    description: Creative labor tasks and AI evaluation
+    description: Creative labor tasks and AI evaluation. Token earning happens exclusively through POST /creative-labor/submit after AI verification.
 paths:
   /healthz:
     get:
@@ -123,30 +123,6 @@ paths:
         "401":
           description: Unauthorized
 
-  /ga/earn:
-    post:
-      operationId: earnGa
-      tags: [ga]
-      summary: Earn GA tokens
-      description: Credits GA tokens to the user's balance after a verified human task. Amount is capped at the user's daily allowance per call.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/EarnGaRequest"
-      responses:
-        "200":
-          description: Updated GA balance
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/GaBalance"
-        "400":
-          description: Invalid amount
-        "401":
-          description: Unauthorized
-
   /chs/current:
     get:
       operationId: getChsCurrent
@@ -203,8 +179,11 @@ paths:
     post:
       operationId: submitCreativeLabor
       tags: [creative-labor]
-      summary: Submit creative labor for AI evaluation
-      description: Sends the user's submission to an AI evaluator which scores it and awards GA tokens on success
+      summary: Submit creative labor for AI evaluation and token award
+      description: |
+        Sends the user's submission to an AI evaluator which scores it against task criteria.
+        On a passing verdict, GA tokens are credited to the user's balance atomically in the same
+        transaction — this is the sole verified path for earning GA tokens through creative labor.
       requestBody:
         required: true
         content:
@@ -213,7 +192,7 @@ paths:
               $ref: "#/components/schemas/SubmitCreativeLaborRequest"
       responses:
         "200":
-          description: Evaluation verdict
+          description: Evaluation verdict with updated balance
           content:
             application/json:
               schema:
@@ -317,18 +296,6 @@ components:
         - createdAt
 
     SpendGaRequest:
-      type: object
-      properties:
-        amount:
-          type: integer
-          minimum: 1
-        reason:
-          type: string
-      required:
-        - amount
-        - reason
-
-    EarnGaRequest:
       type: object
       properties:
         amount:

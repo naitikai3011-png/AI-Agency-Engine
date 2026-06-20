@@ -62,8 +62,6 @@ router.post("/ga/spend", requireAuth, async (req, res): Promise<void> => {
     return;
   }
 
-  let newBalance: number;
-
   try {
     const result = await db.transaction(async (tx) => {
       const [updated] = await tx
@@ -81,9 +79,7 @@ router.post("/ga/spend", requireAuth, async (req, res): Promise<void> => {
           lastGaResetAt: usersTable.lastGaResetAt,
         });
 
-      if (!updated) {
-        return null;
-      }
+      if (!updated) return null;
 
       await tx.insert(gaTokenLedgerTable).values({
         userId: user.clerkId,
@@ -99,67 +95,14 @@ router.post("/ga/spend", requireAuth, async (req, res): Promise<void> => {
       return;
     }
 
-    newBalance = result.gaBalance;
     res.json({
-      balance: newBalance,
+      balance: result.gaBalance,
       dailyAllowance: result.dailyAllowance,
       lastResetAt: result.lastGaResetAt.toISOString(),
     });
   } catch (err) {
     console.error("GA spend error:", err);
     res.status(500).json({ error: "Failed to process spend" });
-  }
-});
-
-router.post("/ga/earn", requireAuth, async (req, res): Promise<void> => {
-  const user = await getOrCreateUser(req);
-  if (!user) {
-    res.status(401).json({ error: "Unauthorized" });
-    return;
-  }
-
-  const { amount, reason } = req.body as { amount: number; reason: string };
-
-  if (!amount || amount < 1 || !Number.isInteger(amount)) {
-    res.status(400).json({ error: "Invalid amount" });
-    return;
-  }
-  if (!reason || typeof reason !== "string") {
-    res.status(400).json({ error: "Reason is required" });
-    return;
-  }
-
-  const cappedAmount = Math.min(amount, user.dailyAllowance);
-
-  try {
-    const [updated] = await db.transaction(async (tx) => {
-      const rows = await tx
-        .update(usersTable)
-        .set({ gaBalance: sql`${usersTable.gaBalance} + ${cappedAmount}` })
-        .where(eq(usersTable.clerkId, user.clerkId))
-        .returning({
-          gaBalance: usersTable.gaBalance,
-          dailyAllowance: usersTable.dailyAllowance,
-          lastGaResetAt: usersTable.lastGaResetAt,
-        });
-
-      await tx.insert(gaTokenLedgerTable).values({
-        userId: user.clerkId,
-        delta: cappedAmount,
-        reason,
-      });
-
-      return rows;
-    });
-
-    res.json({
-      balance: updated.gaBalance,
-      dailyAllowance: updated.dailyAllowance,
-      lastResetAt: updated.lastGaResetAt.toISOString(),
-    });
-  } catch (err) {
-    console.error("GA earn error:", err);
-    res.status(500).json({ error: "Failed to process earn" });
   }
 });
 
