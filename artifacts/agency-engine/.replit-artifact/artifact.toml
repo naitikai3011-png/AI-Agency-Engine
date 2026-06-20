@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "The Agency Engine"
+version = "1.0.0"
+id = "artifacts/agency-engine"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 19632
+
+[services.development]
+run = "pnpm --filter @workspace/agency-engine run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/agency-engine", "run", "build" ]
+publicDir = "artifacts/agency-engine/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "19632"
+BASE_PATH = "/"

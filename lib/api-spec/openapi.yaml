@@ -3,13 +3,19 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: API specification for The Agency Engine
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: user
+    description: User profile and stats
+  - name: ga
+    description: Genius Answer token management
+  - name: chs
+    description: Cognitive Health Score
 paths:
   /healthz:
     get:
@@ -24,6 +30,107 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /me:
+    get:
+      operationId: getMe
+      tags: [user]
+      summary: Get current user profile
+      description: Returns user profile with current GA token balance
+      responses:
+        "200":
+          description: User profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserProfile"
+        "401":
+          description: Unauthorized
+
+  /stats:
+    get:
+      operationId: getStats
+      tags: [user]
+      summary: Get dashboard stats
+      description: Returns summary counts for the dashboard
+      responses:
+        "200":
+          description: Dashboard stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardStats"
+        "401":
+          description: Unauthorized
+
+  /ga/balance:
+    get:
+      operationId: getGaBalance
+      tags: [ga]
+      summary: Get GA token balance
+      description: Returns the current GA token balance for the user
+      responses:
+        "200":
+          description: GA token balance
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GaBalance"
+        "401":
+          description: Unauthorized
+
+  /ga/history:
+    get:
+      operationId: getGaHistory
+      tags: [ga]
+      summary: Get GA token history
+      description: Returns the ledger of GA token transactions
+      responses:
+        "200":
+          description: GA token history
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/GaLedgerEntry"
+        "401":
+          description: Unauthorized
+
+  /chs/current:
+    get:
+      operationId: getChsCurrent
+      tags: [chs]
+      summary: Get current Cognitive Health Score
+      description: Returns the user's current CHS and factor breakdown
+      responses:
+        "200":
+          description: Current CHS
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChsScore"
+        "401":
+          description: Unauthorized
+
+  /chs/history:
+    get:
+      operationId: getChsHistory
+      tags: [chs]
+      summary: Get CHS history
+      description: Returns daily CHS averages for the past 30 days
+      responses:
+        "200":
+          description: CHS history
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ChsHistoryPoint"
+        "401":
+          description: Unauthorized
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +141,131 @@ components:
       required:
         - status
 
+    UserProfile:
+      type: object
+      properties:
+        clerkId:
+          type: string
+        email:
+          type: string
+        displayName:
+          type: ["string", "null"]
+        gaBalance:
+          type: integer
+        chsScore:
+          type: integer
+        createdAt:
+          type: string
+      required:
+        - clerkId
+        - email
+        - gaBalance
+        - chsScore
+        - createdAt
+
+    DashboardStats:
+      type: object
+      properties:
+        gaBalance:
+          type: integer
+        gaEarnedToday:
+          type: integer
+        gaSpentToday:
+          type: integer
+        chsScore:
+          type: integer
+        chsTrend:
+          type: string
+          enum: [up, down, stable]
+        tasksCompletedTotal:
+          type: integer
+        humanTasksCompletedTotal:
+          type: integer
+        streakDays:
+          type: integer
+      required:
+        - gaBalance
+        - gaEarnedToday
+        - gaSpentToday
+        - chsScore
+        - chsTrend
+        - tasksCompletedTotal
+        - humanTasksCompletedTotal
+        - streakDays
+
+    GaBalance:
+      type: object
+      properties:
+        balance:
+          type: integer
+        dailyAllowance:
+          type: integer
+        lastResetAt:
+          type: string
+      required:
+        - balance
+        - dailyAllowance
+        - lastResetAt
+
+    GaLedgerEntry:
+      type: object
+      properties:
+        id:
+          type: integer
+        delta:
+          type: integer
+        reason:
+          type: string
+        createdAt:
+          type: string
+      required:
+        - id
+        - delta
+        - reason
+        - createdAt
+
+    ChsScore:
+      type: object
+      properties:
+        score:
+          type: integer
+        band:
+          type: string
+          enum: [critical, poor, fair, good, thriving]
+        factors:
+          $ref: "#/components/schemas/ChsFactors"
+        updatedAt:
+          type: string
+      required:
+        - score
+        - band
+        - factors
+        - updatedAt
+
+    ChsFactors:
+      type: object
+      properties:
+        complexity:
+          type: integer
+        originality:
+          type: integer
+        depth:
+          type: integer
+        effort:
+          type: integer
+      required:
+        - complexity
+        - originality
+        - depth
+        - effort
+
+    ChsHistoryPoint:
+      type: object
+      properties:
+        date:
+          type: string
+        averageScore:
+          type: integer
+      required:
+        - date
+        - averageScore
