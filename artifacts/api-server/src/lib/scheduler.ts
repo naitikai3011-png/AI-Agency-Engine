@@ -15,39 +15,35 @@ async function runDailyReset() {
   logger.info({ resetAt }, "Running daily GA token reset");
 
   try {
-    const users = await db.select({
-      clerkId: usersTable.clerkId,
-      gaBalance: usersTable.gaBalance,
-      dailyAllowance: usersTable.dailyAllowance,
-    }).from(usersTable);
-
-    let resetCount = 0;
+    const users = await db
+      .select({
+        clerkId: usersTable.clerkId,
+        gaBalance: usersTable.gaBalance,
+        dailyAllowance: usersTable.dailyAllowance,
+      })
+      .from(usersTable);
 
     await db.transaction(async (tx) => {
       for (const user of users) {
-        if (user.gaBalance !== user.dailyAllowance) {
-          await tx
-            .update(usersTable)
-            .set({ gaBalance: user.dailyAllowance, lastGaResetAt: resetAt })
-            .where(sql`${usersTable.clerkId} = ${user.clerkId}`);
+        const delta = user.dailyAllowance - user.gaBalance;
 
-          await tx.insert(gaTokenLedgerTable).values({
-            userId: user.clerkId,
-            delta: user.dailyAllowance - user.gaBalance,
-            reason: "Daily GA token reset",
-          });
+        await tx
+          .update(usersTable)
+          .set({
+            gaBalance: user.dailyAllowance,
+            lastGaResetAt: resetAt,
+          })
+          .where(sql`${usersTable.clerkId} = ${user.clerkId}`);
 
-          resetCount++;
-        } else {
-          await tx
-            .update(usersTable)
-            .set({ lastGaResetAt: resetAt })
-            .where(sql`${usersTable.clerkId} = ${user.clerkId}`);
-        }
+        await tx.insert(gaTokenLedgerTable).values({
+          userId: user.clerkId,
+          delta,
+          reason: "Daily GA token reset",
+        });
       }
     });
 
-    logger.info({ usersReset: resetCount, totalUsers: users.length }, "Daily GA reset complete");
+    logger.info({ usersProcessed: users.length }, "Daily GA reset complete");
   } catch (err) {
     logger.error({ err }, "Daily GA reset failed");
   }

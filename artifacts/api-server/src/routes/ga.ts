@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, sql, and, gte } from "drizzle-orm";
 import { db, usersTable, gaTokenLedgerTable } from "@workspace/db";
 import { requireAuth } from "../middlewares/requireAuth";
 import { getOrCreateUser } from "../lib/userSync";
@@ -61,31 +61,106 @@ router.post("/ga/spend", requireAuth, async (req, res): Promise<void> => {
     res.status(400).json({ error: "Reason is required" });
     return;
   }
-  if (user.gaBalance < amount) {
-    res.status(400).json({ error: "Insufficient GA balance" });
+
+  let newBalance: number;
+
+  try {
+    const result = await db.transaction(async (tx) => {
+      const [updated] = await tx
+        .update(usersTable)
+        .set({ gaBalance: sql`${usersTable.gaBalance} - ${amount}` })
+        .where(
+          and(
+            eq(usersTable.clerkId, user.clerkId),
+            gte(usersTable.gaBalance, amount)
+          )
+        )
+        .returning({
+          gaBalance: usersTable.gaBalance,
+          dailyAllowance: usersTable.dailyAllowance,
+          lastGaResetAt: usersTable.lastGaResetAt,
+        });
+
+      if (!updated) {
+        return null;
+      }
+
+      await tx.insert(gaTokenLedgerTable).values({
+        userId: user.clerkId,
+        delta: -amount,
+        reason,
+      });
+
+      return updated;
+    });
+
+    if (!result) {
+      res.status(400).json({ error: "Insufficient GA balance" });
+      return;
+    }
+
+    newBalance = result.gaBalance;
+    res.json({
+      balance: newBalance,
+      dailyAllowance: result.dailyAllowance,
+      lastResetAt: result.lastGaResetAt.toISOString(),
+    });
+  } catch (err) {
+    console.error("GA spend error:", err);
+    res.status(500).json({ error: "Failed to process spend" });
+  }
+});
+
+router.post("/ga/earn", requireAuth, async (req, res): Promise<void> => {
+  const user = await getOrCreateUser(req);
+  if (!user) {
+    res.status(401).json({ error: "Unauthorized" });
     return;
   }
 
-  const newBalance = user.gaBalance - amount;
+  const { amount, reason } = req.body as { amount: number; reason: string };
 
-  await db.transaction(async (tx) => {
-    await tx
-      .update(usersTable)
-      .set({ gaBalance: newBalance })
-      .where(eq(usersTable.clerkId, user.clerkId));
+  if (!amount || amount < 1 || !Number.isInteger(amount)) {
+    res.status(400).json({ error: "Invalid amount" });
+    return;
+  }
+  if (!reason || typeof reason !== "string") {
+    res.status(400).json({ error: "Reason is required" });
+    return;
+  }
 
-    await tx.insert(gaTokenLedgerTable).values({
-      userId: user.clerkId,
-      delta: -amount,
-      reason,
+  const cappedAmount = Math.min(amount, user.dailyAllowance);
+
+  try {
+    const [updated] = await db.transaction(async (tx) => {
+      const rows = await tx
+        .update(usersTable)
+        .set({ gaBalance: sql`${usersTable.gaBalance} + ${cappedAmount}` })
+        .where(eq(usersTable.clerkId, user.clerkId))
+        .returning({
+          gaBalance: usersTable.gaBalance,
+          dailyAllowance: usersTable.dailyAllowance,
+          lastGaResetAt: usersTable.lastGaResetAt,
+        });
+
+      await tx.insert(gaTokenLedgerTable).values({
+        userId: user.clerkId,
+        delta: cappedAmount,
+        reason,
+      });
+
+      return rows;
     });
-  });
 
-  res.json({
-    balance: newBalance,
-    dailyAllowance: user.dailyAllowance,
-    lastResetAt: user.lastGaResetAt.toISOString(),
-  });
+    res.json({
+      balance: updated.gaBalance,
+      dailyAllowance: updated.dailyAllowance,
+      lastResetAt: updated.lastGaResetAt.toISOString(),
+    });
+  } catch (err) {
+    console.error("GA earn error:", err);
+    res.status(500).json({ error: "Failed to process earn" });
+  }
 });
 
 export default router;

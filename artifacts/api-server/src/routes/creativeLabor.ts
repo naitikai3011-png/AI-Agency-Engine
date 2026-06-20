@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { db, usersTable, gaTokenLedgerTable, creativeLaborSubmissionsTable, creativeLaborTaskTemplatesTable } from "@workspace/db";
 import { requireAuth } from "../middlewares/requireAuth";
 import { getOrCreateUser } from "../lib/userSync";
@@ -99,7 +99,6 @@ Evaluate this submission. Does it meet the criteria? Award GA tokens (0–${task
     });
 
     const raw = response.choices[0]?.message?.content ?? "";
-
     const jsonMatch = raw.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
       const parsed = JSON.parse(jsonMatch[0]) as {
@@ -121,35 +120,43 @@ Evaluate this submission. Does it meet the criteria? Award GA tokens (0–${task
   let newBalance = user.gaBalance;
   let submissionId: number;
 
-  await db.transaction(async (tx) => {
-    const [submission] = await tx
-      .insert(creativeLaborSubmissionsTable)
-      .values({
-        userId: user.clerkId,
-        taskType: task.type,
-        content: content.trim(),
-        verdict: qualityNotes,
-        passed,
-        gaRewarded: gaReward,
-      })
-      .returning();
+  try {
+    await db.transaction(async (tx) => {
+      const [submission] = await tx
+        .insert(creativeLaborSubmissionsTable)
+        .values({
+          userId: user.clerkId,
+          taskType: task.type,
+          content: content.trim(),
+          verdict: qualityNotes,
+          passed,
+          gaRewarded: gaReward,
+        })
+        .returning();
 
-    submissionId = submission.id;
+      submissionId = submission.id;
 
-    if (passed && gaReward > 0) {
-      newBalance = user.gaBalance + gaReward;
-      await tx
-        .update(usersTable)
-        .set({ gaBalance: newBalance })
-        .where(eq(usersTable.clerkId, user.clerkId));
+      if (passed && gaReward > 0) {
+        const [updated] = await tx
+          .update(usersTable)
+          .set({ gaBalance: sql`${usersTable.gaBalance} + ${gaReward}` })
+          .where(eq(usersTable.clerkId, user.clerkId))
+          .returning({ gaBalance: usersTable.gaBalance });
 
-      await tx.insert(gaTokenLedgerTable).values({
-        userId: user.clerkId,
-        delta: gaReward,
-        reason: `Creative Labor: ${task.title}`,
-      });
-    }
-  });
+        newBalance = updated.gaBalance;
+
+        await tx.insert(gaTokenLedgerTable).values({
+          userId: user.clerkId,
+          delta: gaReward,
+          reason: `Creative Labor: ${task.title}`,
+        });
+      }
+    });
+  } catch (err) {
+    console.error("DB transaction error:", err);
+    res.status(500).json({ error: "Failed to record submission" });
+    return;
+  }
 
   res.json({
     passed,

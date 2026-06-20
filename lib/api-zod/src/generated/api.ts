@@ -91,6 +91,25 @@ export const SpendGaResponse = zod.object({
 
 
 /**
+ * Credits GA tokens to the user's balance after a verified human task. Amount is capped at the user's daily allowance per call.
+ * @summary Earn GA tokens
+ */
+
+
+
+export const EarnGaBody = zod.object({
+  "amount": zod.number().min(1),
+  "reason": zod.string()
+})
+
+export const EarnGaResponse = zod.object({
+  "balance": zod.number(),
+  "dailyAllowance": zod.number(),
+  "lastResetAt": zod.string()
+})
+
+
+/**
  * Returns the user's current CHS and factor breakdown
  * @summary Get current Cognitive Health Score
  */

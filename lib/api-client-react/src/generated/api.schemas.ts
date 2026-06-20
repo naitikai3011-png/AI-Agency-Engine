@@ -58,6 +58,12 @@ export interface SpendGaRequest {
   reason: string;
 }
 
+export interface EarnGaRequest {
+  /** @minimum 1 */
+  amount: number;
+  reason: string;
+}
+
 export type ChsScoreBand = typeof ChsScoreBand[keyof typeof ChsScoreBand];
 
 
