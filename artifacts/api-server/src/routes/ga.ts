@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, desc, sql, and, gte } from "drizzle-orm";
+import { eq, desc, sql, and, gte, gt } from "drizzle-orm";
 import { db, usersTable, gaTokenLedgerTable, creativeLaborSubmissionsTable } from "@workspace/db";
 import { requireAuth } from "../middlewares/requireAuth";
 import { getOrCreateUser } from "../lib/userSync";
@@ -73,9 +73,14 @@ router.post("/ga/spend", requireAuth, async (req, res): Promise<void> => {
  * POST /ga/earn
  *
  * Claims GA tokens for a verified submission. Requires a submissionId from a
- * passing /creative-labor/submit evaluation. Each submission can be credited
- * exactly once (credited=false guard prevents double-award). This design ensures
- * token issuance is always tied to a verified, AI-evaluated labor event.
+ * passing /creative-labor/submit evaluation.
+ *
+ * Concurrency safety: the `credited` flag is flipped inside the transaction
+ * using a predicate that includes `credited=false`, `passed=true`, and
+ * `gaRewarded > 0`. The UPDATE returns the affected row — if no row comes back
+ * (concurrent claim already won, wrong user, or invalid state), the transaction
+ * aborts and returns 400 before any balance change occurs. There is no
+ * pre-read/check outside the transaction; all guards are inside the atomic block.
  */
 router.post("/ga/earn", requireAuth, async (req, res): Promise<void> => {
   const user = await getOrCreateUser(req);
@@ -86,56 +91,55 @@ router.post("/ga/earn", requireAuth, async (req, res): Promise<void> => {
     res.status(400).json({ error: "Valid submissionId is required" }); return;
   }
 
-  const [submission] = await db
-    .select()
-    .from(creativeLaborSubmissionsTable)
-    .where(and(
-      eq(creativeLaborSubmissionsTable.id, submissionId),
-      eq(creativeLaborSubmissionsTable.userId, user.clerkId),
-    ))
-    .limit(1);
-
-  if (!submission) {
-    res.status(400).json({ error: "Submission not found" }); return;
-  }
-  if (!submission.passed || submission.gaRewarded <= 0) {
-    res.status(400).json({ error: "Submission did not pass evaluation" }); return;
-  }
-  if (submission.credited) {
-    res.status(400).json({ error: "Tokens for this submission have already been claimed" }); return;
-  }
-
-  const amount = submission.gaRewarded;
-
   try {
-    const [updated] = await db.transaction(async (tx) => {
-      await tx
+    const result = await db.transaction(async (tx) => {
+      // Atomically flip credited=false → credited=true with all validity checks in the predicate.
+      // If another request already claimed this submission, or state is invalid, returns [].
+      const [claimed] = await tx
         .update(creativeLaborSubmissionsTable)
         .set({ credited: true })
         .where(and(
           eq(creativeLaborSubmissionsTable.id, submissionId),
+          eq(creativeLaborSubmissionsTable.userId, user.clerkId),
           eq(creativeLaborSubmissionsTable.credited, false),
-        ));
+          eq(creativeLaborSubmissionsTable.passed, true),
+          gt(creativeLaborSubmissionsTable.gaRewarded, 0),
+        ))
+        .returning({ gaRewarded: creativeLaborSubmissionsTable.gaRewarded });
 
-      const rows = await tx
+      // No row → submission not found, wrong owner, not passed, already credited, or 0 reward.
+      if (!claimed) return null;
+
+      const amount = claimed.gaRewarded;
+
+      const [updated] = await tx
         .update(usersTable)
         .set({ gaBalance: sql`${usersTable.gaBalance} + ${amount}` })
         .where(eq(usersTable.clerkId, user.clerkId))
-        .returning({ gaBalance: usersTable.gaBalance, dailyAllowance: usersTable.dailyAllowance, lastGaResetAt: usersTable.lastGaResetAt });
+        .returning({
+          gaBalance: usersTable.gaBalance,
+          dailyAllowance: usersTable.dailyAllowance,
+          lastGaResetAt: usersTable.lastGaResetAt,
+        });
 
       await tx.insert(gaTokenLedgerTable).values({
         userId: user.clerkId,
         delta: amount,
-        reason: `Creative Labor reward claimed`,
+        reason: "Creative Labor reward claimed",
       });
 
-      return rows;
+      return updated;
     });
 
+    if (!result) {
+      res.status(400).json({ error: "Submission is invalid, already credited, or not owned by you" });
+      return;
+    }
+
     res.json({
-      balance: updated.gaBalance,
-      dailyAllowance: updated.dailyAllowance,
-      lastResetAt: updated.lastGaResetAt.toISOString(),
+      balance: result.gaBalance,
+      dailyAllowance: result.dailyAllowance,
+      lastResetAt: result.lastGaResetAt.toISOString(),
     });
   } catch (err) {
     console.error("GA earn error:", err);
