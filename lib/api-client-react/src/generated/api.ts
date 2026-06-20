@@ -28,6 +28,9 @@ import type {
   EarnGaRequest,
   GaBalance,
   GaLedgerEntry,
+  GatewayStatus,
+  GatewaySubmitRequest,
+  GatewaySubmitResult,
   HealthStatus,
   RecordChsRequest,
   SpendGaRequest,
@@ -816,6 +819,233 @@ export function useGetChsHistory<TData = Awaited<ReturnType<typeof getChsHistory
 
 
 
+
+export const getGetGatewayStatusUrl = () => {
+
+
+
+
+  return `/api/gateway/status`
+}
+
+/**
+ * Returns whether the gateway is locked, the assigned human task (if locked),
+remaining access time (if unlocked), and session spend/time progress.
+Auto-runs expiry and threshold checks so the response always reflects live state.
+
+ * @summary Get current gateway state
+ */
+export const getGatewayStatus = async ( options?: RequestInit): Promise<GatewayStatus> => {
+
+  return customFetch<GatewayStatus>(getGetGatewayStatusUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetGatewayStatusQueryKey = () => {
+    return [
+    `/api/gateway/status`
+    ] as const;
+    }
+
+
+export const getGetGatewayStatusQueryOptions = <TData = Awaited<ReturnType<typeof getGatewayStatus>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getGatewayStatus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetGatewayStatusQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getGatewayStatus>>> = ({ signal }) => getGatewayStatus({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getGatewayStatus>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetGatewayStatusQueryResult = NonNullable<Awaited<ReturnType<typeof getGatewayStatus>>>
+export type GetGatewayStatusQueryError = ErrorType<void>
+
+
+/**
+ * @summary Get current gateway state
+ */
+
+export function useGetGatewayStatus<TData = Awaited<ReturnType<typeof getGatewayStatus>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getGatewayStatus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetGatewayStatusQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getTriggerGatewayUrl = () => {
+
+
+
+
+  return `/api/gateway/trigger`
+}
+
+/**
+ * Locks the gateway and assigns a random human task. No-op if already locked.
+ * @summary Manually lock the gateway
+ */
+export const triggerGateway = async ( options?: RequestInit): Promise<GatewayStatus> => {
+
+  return customFetch<GatewayStatus>(getTriggerGatewayUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getTriggerGatewayMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof triggerGateway>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof triggerGateway>>, TError,void, TContext> => {
+
+const mutationKey = ['triggerGateway'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof triggerGateway>>, void> = () => {
+
+
+          return  triggerGateway(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type TriggerGatewayMutationResult = NonNullable<Awaited<ReturnType<typeof triggerGateway>>>
+
+    export type TriggerGatewayMutationError = ErrorType<void>
+
+    /**
+ * @summary Manually lock the gateway
+ */
+export const useTriggerGateway = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof triggerGateway>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof triggerGateway>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getTriggerGatewayMutationOptions(options));
+    }
+
+export const getSubmitGatewayUrl = () => {
+
+
+
+
+  return `/api/gateway/submit`
+}
+
+/**
+ * Evaluates the user's response to the assigned human task via LLM.
+On pass: unlocks the gateway for 30 minutes and awards a GA bonus.
+On fail: returns feedback but leaves the gateway locked.
+
+ * @summary Submit a human-task response
+ */
+export const submitGateway = async (gatewaySubmitRequest: GatewaySubmitRequest, options?: RequestInit): Promise<GatewaySubmitResult> => {
+
+  return customFetch<GatewaySubmitResult>(getSubmitGatewayUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      gatewaySubmitRequest,)
+  }
+);}
+
+
+
+
+export const getSubmitGatewayMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof submitGateway>>, TError,{data: BodyType<GatewaySubmitRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof submitGateway>>, TError,{data: BodyType<GatewaySubmitRequest>}, TContext> => {
+
+const mutationKey = ['submitGateway'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof submitGateway>>, {data: BodyType<GatewaySubmitRequest>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  submitGateway(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SubmitGatewayMutationResult = NonNullable<Awaited<ReturnType<typeof submitGateway>>>
+    export type SubmitGatewayMutationBody = BodyType<GatewaySubmitRequest>
+    export type SubmitGatewayMutationError = ErrorType<void>
+
+    /**
+ * @summary Submit a human-task response
+ */
+export const useSubmitGateway = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof submitGateway>>, TError,{data: BodyType<GatewaySubmitRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof submitGateway>>,
+        TError,
+        {data: BodyType<GatewaySubmitRequest>},
+        TContext
+      > => {
+      return useMutation(getSubmitGatewayMutationOptions(options));
+    }
 
 export const getGetCreativeLaborTasksUrl = () => {
 

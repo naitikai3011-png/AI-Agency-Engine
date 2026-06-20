@@ -168,6 +168,81 @@ export const GetChsHistoryResponse = zod.array(GetChsHistoryResponseItem)
 
 
 /**
+ * Returns whether the gateway is locked, the assigned human task (if locked),
+remaining access time (if unlocked), and session spend/time progress.
+Auto-runs expiry and threshold checks so the response always reflects live state.
+
+ * @summary Get current gateway state
+ */
+export const GetGatewayStatusResponse = zod.object({
+  "locked": zod.boolean(),
+  "currentTask": zod.object({
+  "type": zod.string(),
+  "title": zod.string(),
+  "description": zod.string(),
+  "instructions": zod.string(),
+  "placeholder": zod.string(),
+  "gaBonus": zod.number(),
+  "timedSeconds": zod.number().nullable().describe('Countdown duration in seconds, or null if not a timed task')
+}).nullable(),
+  "unlockExpiresAt": zod.string().nullable(),
+  "minutesRemaining": zod.number().nullable(),
+  "sessionSpend": zod.number(),
+  "sessionSpendThreshold": zod.number(),
+  "sessionMinutesElapsed": zod.number(),
+  "sessionMinutesLimit": zod.number()
+})
+
+
+/**
+ * Locks the gateway and assigns a random human task. No-op if already locked.
+ * @summary Manually lock the gateway
+ */
+export const TriggerGatewayResponse = zod.object({
+  "locked": zod.boolean(),
+  "currentTask": zod.object({
+  "type": zod.string(),
+  "title": zod.string(),
+  "description": zod.string(),
+  "instructions": zod.string(),
+  "placeholder": zod.string(),
+  "gaBonus": zod.number(),
+  "timedSeconds": zod.number().nullable().describe('Countdown duration in seconds, or null if not a timed task')
+}).nullable(),
+  "unlockExpiresAt": zod.string().nullable(),
+  "minutesRemaining": zod.number().nullable(),
+  "sessionSpend": zod.number(),
+  "sessionSpendThreshold": zod.number(),
+  "sessionMinutesElapsed": zod.number(),
+  "sessionMinutesLimit": zod.number()
+})
+
+
+/**
+ * Evaluates the user's response to the assigned human task via LLM.
+On pass: unlocks the gateway for 30 minutes and awards a GA bonus.
+On fail: returns feedback but leaves the gateway locked.
+
+ * @summary Submit a human-task response
+ */
+export const submitGatewayBodyResponseMin = 20;
+
+
+
+export const SubmitGatewayBody = zod.object({
+  "response": zod.string().min(submitGatewayBodyResponseMin).describe('The user\'s response to the assigned human task')
+})
+
+export const SubmitGatewayResponse = zod.object({
+  "passed": zod.boolean(),
+  "verdict": zod.string(),
+  "gaBonus": zod.number(),
+  "newBalance": zod.number(),
+  "unlockExpiresAt": zod.string().nullable()
+})
+
+
+/**
  * Returns the list of task templates available for completion
  * @summary Get available creative labor tasks
  */

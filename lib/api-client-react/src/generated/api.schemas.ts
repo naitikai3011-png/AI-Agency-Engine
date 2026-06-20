@@ -103,6 +103,44 @@ export interface ChsHistoryPoint {
   averageScore: number;
 }
 
+export interface GatewayTaskInfo {
+  type: string;
+  title: string;
+  description: string;
+  instructions: string;
+  placeholder: string;
+  gaBonus: number;
+  /** Countdown duration in seconds, or null if not a timed task */
+  timedSeconds: number | null;
+}
+
+export interface GatewayStatus {
+  locked: boolean;
+  currentTask: GatewayTaskInfo | null;
+  unlockExpiresAt: string | null;
+  minutesRemaining: number | null;
+  sessionSpend: number;
+  sessionSpendThreshold: number;
+  sessionMinutesElapsed: number;
+  sessionMinutesLimit: number;
+}
+
+export interface GatewaySubmitRequest {
+  /**
+     * The user's response to the assigned human task
+     * @minLength 20
+     */
+  response: string;
+}
+
+export interface GatewaySubmitResult {
+  passed: boolean;
+  verdict: string;
+  gaBonus: number;
+  newBalance: number;
+  unlockExpiresAt: string | null;
+}
+
 export interface CreativeLaborTask {
   id: number;
   slug: string;

@@ -3,6 +3,7 @@ import { eq, desc, sql, and, gte, gt } from "drizzle-orm";
 import { db, usersTable, gaTokenLedgerTable, creativeLaborSubmissionsTable } from "@workspace/db";
 import { requireAuth } from "../middlewares/requireAuth";
 import { getOrCreateUser } from "../lib/userSync";
+import { recordGatewaySpend } from "../lib/gatewayEngine";
 
 const router: IRouter = Router();
 
@@ -62,6 +63,11 @@ router.post("/ga/spend", requireAuth, async (req, res): Promise<void> => {
     });
 
     if (!result) { res.status(400).json({ error: "Insufficient GA balance" }); return; }
+
+    // Fire-and-forget: track session spend and auto-trigger gateway if threshold hit
+    recordGatewaySpend(user.clerkId, amount)
+      .catch((err) => console.error("Gateway spend tracking error:", err));
+
     res.json({ balance: result.gaBalance, dailyAllowance: result.dailyAllowance, lastResetAt: result.lastGaResetAt.toISOString() });
   } catch (err) {
     console.error("GA spend error:", err);

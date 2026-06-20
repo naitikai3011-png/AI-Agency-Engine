@@ -18,6 +18,8 @@ tags:
     description: Cognitive Health Score
   - name: creative-labor
     description: Creative labor tasks and AI evaluation
+  - name: gateway
+    description: Proof of Humanity Gateway — circuit-breaker for AI access
 paths:
   /healthz:
     get:
@@ -210,6 +212,68 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/ChsHistoryPoint"
+        "401":
+          description: Unauthorized
+
+  /gateway/status:
+    get:
+      operationId: getGatewayStatus
+      tags: [gateway]
+      summary: Get current gateway state
+      description: |
+        Returns whether the gateway is locked, the assigned human task (if locked),
+        remaining access time (if unlocked), and session spend/time progress.
+        Auto-runs expiry and threshold checks so the response always reflects live state.
+      responses:
+        "200":
+          description: Current gateway status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GatewayStatus"
+        "401":
+          description: Unauthorized
+
+  /gateway/trigger:
+    post:
+      operationId: triggerGateway
+      tags: [gateway]
+      summary: Manually lock the gateway
+      description: Locks the gateway and assigns a random human task. No-op if already locked.
+      responses:
+        "200":
+          description: Updated gateway status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GatewayStatus"
+        "401":
+          description: Unauthorized
+
+  /gateway/submit:
+    post:
+      operationId: submitGateway
+      tags: [gateway]
+      summary: Submit a human-task response
+      description: |
+        Evaluates the user's response to the assigned human task via LLM.
+        On pass: unlocks the gateway for 30 minutes and awards a GA bonus.
+        On fail: returns feedback but leaves the gateway locked.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GatewaySubmitRequest"
+      responses:
+        "200":
+          description: Evaluation result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GatewaySubmitResult"
+        "400":
+          description: Gateway not locked, no active task, or response too short
         "401":
           description: Unauthorized
 
@@ -429,6 +493,98 @@ components:
       required:
         - date
         - averageScore
+
+    GatewayTaskInfo:
+      type: object
+      properties:
+        type:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        instructions:
+          type: string
+        placeholder:
+          type: string
+        gaBonus:
+          type: integer
+        timedSeconds:
+          type: integer
+          nullable: true
+          description: Countdown duration in seconds, or null if not a timed task
+      required:
+        - type
+        - title
+        - description
+        - instructions
+        - placeholder
+        - gaBonus
+        - timedSeconds
+
+    GatewayStatus:
+      type: object
+      properties:
+        locked:
+          type: boolean
+        currentTask:
+          nullable: true
+          allOf:
+            - $ref: "#/components/schemas/GatewayTaskInfo"
+        unlockExpiresAt:
+          type: string
+          nullable: true
+        minutesRemaining:
+          type: integer
+          nullable: true
+        sessionSpend:
+          type: integer
+        sessionSpendThreshold:
+          type: integer
+        sessionMinutesElapsed:
+          type: integer
+        sessionMinutesLimit:
+          type: integer
+      required:
+        - locked
+        - currentTask
+        - unlockExpiresAt
+        - minutesRemaining
+        - sessionSpend
+        - sessionSpendThreshold
+        - sessionMinutesElapsed
+        - sessionMinutesLimit
+
+    GatewaySubmitRequest:
+      type: object
+      properties:
+        response:
+          type: string
+          minLength: 20
+          description: The user's response to the assigned human task
+      required:
+        - response
+
+    GatewaySubmitResult:
+      type: object
+      properties:
+        passed:
+          type: boolean
+        verdict:
+          type: string
+        gaBonus:
+          type: integer
+        newBalance:
+          type: integer
+        unlockExpiresAt:
+          type: string
+          nullable: true
+      required:
+        - passed
+        - verdict
+        - gaBonus
+        - newBalance
+        - unlockExpiresAt
 
     CreativeLaborTask:
       type: object
