@@ -6,10 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface CreativeLaborVerdict {
-  passed: boolean;
-  qualityNotes: string;
-  gaRewarded: number;
-  currentBalance: number;
+export interface EarnGaRequest {
+  /** ID of a passing creative-labor or human-task submission. Single-use — once credited this call returns 400. */
   submissionId: number;
 }

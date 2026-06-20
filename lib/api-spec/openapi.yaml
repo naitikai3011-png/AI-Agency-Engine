@@ -17,7 +17,7 @@ tags:
   - name: chs
     description: Cognitive Health Score
   - name: creative-labor
-    description: Creative labor tasks and AI evaluation. Token earning happens exclusively through POST /creative-labor/submit after AI verification.
+    description: Creative labor tasks and AI evaluation
 paths:
   /healthz:
     get:
@@ -123,6 +123,34 @@ paths:
         "401":
           description: Unauthorized
 
+  /ga/earn:
+    post:
+      operationId: earnGa
+      tags: [ga]
+      summary: Claim earned GA tokens
+      description: |
+        Credits GA tokens to the user's balance for a verified creative-labor or
+        human-task submission. Requires a `submissionId` from a passing evaluation —
+        each submission can only be credited once. This prevents self-award exploits
+        while keeping token issuance in a single trusted path.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EarnGaRequest"
+      responses:
+        "200":
+          description: Updated GA balance after crediting
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GaBalance"
+        "400":
+          description: Invalid submissionId or already credited
+        "401":
+          description: Unauthorized
+
   /chs/current:
     get:
       operationId: getChsCurrent
@@ -179,11 +207,10 @@ paths:
     post:
       operationId: submitCreativeLabor
       tags: [creative-labor]
-      summary: Submit creative labor for AI evaluation and token award
+      summary: Submit creative labor for AI evaluation
       description: |
-        Sends the user's submission to an AI evaluator which scores it against task criteria.
-        On a passing verdict, GA tokens are credited to the user's balance atomically in the same
-        transaction — this is the sole verified path for earning GA tokens through creative labor.
+        Submits creative work for AI evaluation. Returns a verdict with a submissionId.
+        If the verdict passes, call POST /ga/earn with the submissionId to claim tokens.
       requestBody:
         required: true
         content:
@@ -192,7 +219,7 @@ paths:
               $ref: "#/components/schemas/SubmitCreativeLaborRequest"
       responses:
         "200":
-          description: Evaluation verdict with updated balance
+          description: Evaluation verdict
           content:
             application/json:
               schema:
@@ -307,6 +334,15 @@ components:
         - amount
         - reason
 
+    EarnGaRequest:
+      type: object
+      properties:
+        submissionId:
+          type: integer
+          description: ID of a passing creative-labor or human-task submission. Single-use — once credited this call returns 400.
+      required:
+        - submissionId
+
     ChsScore:
       type: object
       properties:
@@ -400,7 +436,7 @@ components:
           type: string
         gaRewarded:
           type: integer
-        newBalance:
+        currentBalance:
           type: integer
         submissionId:
           type: integer
@@ -408,5 +444,5 @@ components:
         - passed
         - qualityNotes
         - gaRewarded
-        - newBalance
+        - currentBalance
         - submissionId

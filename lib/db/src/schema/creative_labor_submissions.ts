@@ -10,6 +10,7 @@ export const creativeLaborSubmissionsTable = pgTable("creative_labor_submissions
   verdict: text("verdict"),
   passed: boolean("passed"),
   gaRewarded: integer("ga_rewarded").notNull().default(0),
+  credited: boolean("credited").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

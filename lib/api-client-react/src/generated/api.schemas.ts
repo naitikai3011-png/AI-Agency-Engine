@@ -58,6 +58,11 @@ export interface SpendGaRequest {
   reason: string;
 }
 
+export interface EarnGaRequest {
+  /** ID of a passing creative-labor or human-task submission. Single-use — once credited this call returns 400. */
+  submissionId: number;
+}
+
 export type ChsScoreBand = typeof ChsScoreBand[keyof typeof ChsScoreBand];
 
 
@@ -108,7 +113,7 @@ export interface CreativeLaborVerdict {
   passed: boolean;
   qualityNotes: string;
   gaRewarded: number;
-  newBalance: number;
+  currentBalance: number;
   submissionId: number;
 }
 

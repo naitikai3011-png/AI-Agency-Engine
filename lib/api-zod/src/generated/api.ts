@@ -91,6 +91,25 @@ export const SpendGaResponse = zod.object({
 
 
 /**
+ * Credits GA tokens to the user's balance for a verified creative-labor or
+human-task submission. Requires a `submissionId` from a passing evaluation —
+each submission can only be credited once. This prevents self-award exploits
+while keeping token issuance in a single trusted path.
+
+ * @summary Claim earned GA tokens
+ */
+export const EarnGaBody = zod.object({
+  "submissionId": zod.number().describe('ID of a passing creative-labor or human-task submission. Single-use — once credited this call returns 400.')
+})
+
+export const EarnGaResponse = zod.object({
+  "balance": zod.number(),
+  "dailyAllowance": zod.number(),
+  "lastResetAt": zod.string()
+})
+
+
+/**
  * Returns the user's current CHS and factor breakdown
  * @summary Get current Cognitive Health Score
  */
@@ -135,11 +154,10 @@ export const GetCreativeLaborTasksResponse = zod.array(GetCreativeLaborTasksResp
 
 
 /**
- * Sends the user's submission to an AI evaluator which scores it against task criteria.
-On a passing verdict, GA tokens are credited to the user's balance atomically in the same
-transaction — this is the sole verified path for earning GA tokens through creative labor.
+ * Submits creative work for AI evaluation. Returns a verdict with a submissionId.
+If the verdict passes, call POST /ga/earn with the submissionId to claim tokens.
 
- * @summary Submit creative labor for AI evaluation and token award
+ * @summary Submit creative labor for AI evaluation
  */
 export const submitCreativeLaborBodyContentMin = 10;
 
@@ -154,7 +172,7 @@ export const SubmitCreativeLaborResponse = zod.object({
   "passed": zod.boolean(),
   "qualityNotes": zod.string(),
   "gaRewarded": zod.number(),
-  "newBalance": zod.number(),
+  "currentBalance": zod.number(),
   "submissionId": zod.number()
 })
 

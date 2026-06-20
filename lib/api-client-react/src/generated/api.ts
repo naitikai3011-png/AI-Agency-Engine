@@ -25,6 +25,7 @@ import type {
   CreativeLaborTask,
   CreativeLaborVerdict,
   DashboardStats,
+  EarnGaRequest,
   GaBalance,
   GaLedgerEntry,
   HealthStatus,
@@ -507,6 +508,82 @@ export const useSpendGa = <TError = ErrorType<void>,
       return useMutation(getSpendGaMutationOptions(options));
     }
 
+export const getEarnGaUrl = () => {
+
+
+
+
+  return `/api/ga/earn`
+}
+
+/**
+ * Credits GA tokens to the user's balance for a verified creative-labor or
+human-task submission. Requires a `submissionId` from a passing evaluation —
+each submission can only be credited once. This prevents self-award exploits
+while keeping token issuance in a single trusted path.
+
+ * @summary Claim earned GA tokens
+ */
+export const earnGa = async (earnGaRequest: EarnGaRequest, options?: RequestInit): Promise<GaBalance> => {
+
+  return customFetch<GaBalance>(getEarnGaUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      earnGaRequest,)
+  }
+);}
+
+
+
+
+export const getEarnGaMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof earnGa>>, TError,{data: BodyType<EarnGaRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof earnGa>>, TError,{data: BodyType<EarnGaRequest>}, TContext> => {
+
+const mutationKey = ['earnGa'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof earnGa>>, {data: BodyType<EarnGaRequest>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  earnGa(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type EarnGaMutationResult = NonNullable<Awaited<ReturnType<typeof earnGa>>>
+    export type EarnGaMutationBody = BodyType<EarnGaRequest>
+    export type EarnGaMutationError = ErrorType<void>
+
+    /**
+ * @summary Claim earned GA tokens
+ */
+export const useEarnGa = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof earnGa>>, TError,{data: BodyType<EarnGaRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof earnGa>>,
+        TError,
+        {data: BodyType<EarnGaRequest>},
+        TContext
+      > => {
+      return useMutation(getEarnGaMutationOptions(options));
+    }
+
 export const getGetChsCurrentUrl = () => {
 
 
@@ -750,11 +827,10 @@ export const getSubmitCreativeLaborUrl = () => {
 }
 
 /**
- * Sends the user's submission to an AI evaluator which scores it against task criteria.
-On a passing verdict, GA tokens are credited to the user's balance atomically in the same
-transaction — this is the sole verified path for earning GA tokens through creative labor.
+ * Submits creative work for AI evaluation. Returns a verdict with a submissionId.
+If the verdict passes, call POST /ga/earn with the submissionId to claim tokens.
 
- * @summary Submit creative labor for AI evaluation and token award
+ * @summary Submit creative labor for AI evaluation
  */
 export const submitCreativeLabor = async (submitCreativeLaborRequest: SubmitCreativeLaborRequest, options?: RequestInit): Promise<CreativeLaborVerdict> => {
 
@@ -803,7 +879,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     export type SubmitCreativeLaborMutationError = ErrorType<void>
 
     /**
- * @summary Submit creative labor for AI evaluation and token award
+ * @summary Submit creative labor for AI evaluation
  */
 export const useSubmitCreativeLabor = <TError = ErrorType<void>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof submitCreativeLabor>>, TError,{data: BodyType<SubmitCreativeLaborRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}

@@ -9,7 +9,7 @@ import {
   getGetCreativeLaborTasksQueryKey,
   getGetMeQueryKey,
 } from "@workspace/api-client-react";
-import type { CreativeLaborTask, CreativeLaborVerdict } from "@workspace/api-client-react";
+import type { CreativeLaborTask, CreativeLaborVerdict, GaBalance } from "@workspace/api-client-react";
 import { Zap, Clock, Code, PenTool, Lightbulb, History, ChevronRight, ChevronLeft, CheckCircle, XCircle, Loader2, AlertTriangle } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
@@ -39,13 +39,16 @@ export default function Earn() {
   const [activeTask, setActiveTask] = useState<CreativeLaborTask | null>(null);
   const [submission, setSubmission] = useState("");
   const [isEvaluating, setIsEvaluating] = useState(false);
+  const [isClaiming, setIsClaiming] = useState(false);
   const [verdict, setVerdict] = useState<CreativeLaborVerdict | null>(null);
+  const [claimedBalance, setClaimedBalance] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   function startTask(task: CreativeLaborTask) {
     setActiveTask(task);
     setSubmission("");
     setVerdict(null);
+    setClaimedBalance(null);
     setError(null);
     setPhase("submitting");
   }
@@ -55,6 +58,7 @@ export default function Earn() {
     setActiveTask(null);
     setSubmission("");
     setVerdict(null);
+    setClaimedBalance(null);
     setError(null);
   }
 
@@ -80,9 +84,7 @@ export default function Earn() {
       setPhase("result");
 
       if (result.passed && result.gaRewarded > 0) {
-        await queryClient.invalidateQueries({ queryKey: getGetGaBalanceQueryKey() });
-        await queryClient.invalidateQueries({ queryKey: getGetGaHistoryQueryKey() });
-        await queryClient.invalidateQueries({ queryKey: getGetMeQueryKey() });
+        await claimTokens(result.submissionId);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
@@ -91,7 +93,36 @@ export default function Earn() {
     }
   }
 
+  async function claimTokens(submissionId: number) {
+    setIsClaiming(true);
+    try {
+      const res = await fetch("/api/ga/earn", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ submissionId }),
+      });
+
+      if (!res.ok) {
+        const body = (await res.json()) as { error?: string };
+        throw new Error(body.error ?? "Token claim failed");
+      }
+
+      const earned = (await res.json()) as GaBalance;
+      setClaimedBalance(earned.balance);
+
+      await queryClient.invalidateQueries({ queryKey: getGetGaBalanceQueryKey() });
+      await queryClient.invalidateQueries({ queryKey: getGetGaHistoryQueryKey() });
+      await queryClient.invalidateQueries({ queryKey: getGetMeQueryKey() });
+    } catch (err) {
+      console.error("Token claim error:", err);
+      setError(err instanceof Error ? err.message : "Failed to claim tokens — contact support");
+    } finally {
+      setIsClaiming(false);
+    }
+  }
+
   const Icon = activeTask ? (TASK_ICONS[activeTask.type] ?? Lightbulb) : Lightbulb;
+  const displayBalance = claimedBalance ?? verdict?.currentBalance ?? balance?.balance ?? 0;
 
   return (
     <div className="space-y-8 max-w-5xl mx-auto">
@@ -297,9 +328,24 @@ export default function Earn() {
                 +{verdict.gaRewarded} GA
               </div>
             )}
-            <div className="text-sm text-muted-foreground uppercase tracking-widest mb-6">
-              New Balance: <span className="text-foreground font-bold">{verdict.newBalance} GA</span>
+            <div className="text-sm text-muted-foreground uppercase tracking-widest mb-2">
+              {isClaiming ? (
+                <span className="flex items-center justify-center gap-2">
+                  <Loader2 className="w-4 h-4 animate-spin" /> Crediting tokens to your balance…
+                </span>
+              ) : (
+                <>
+                  New Balance:{" "}
+                  <span className="text-foreground font-bold">{displayBalance} GA</span>
+                </>
+              )}
             </div>
+            {error && (
+              <div className="mt-4 border-2 border-destructive bg-destructive/10 p-4 flex items-start gap-3 text-left">
+                <AlertTriangle className="w-5 h-5 text-destructive shrink-0 mt-0.5" />
+                <p className="text-sm text-destructive font-mono">{error}</p>
+              </div>
+            )}
           </div>
 
           <div className="border-2 border-border bg-card p-6">
