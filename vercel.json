@@ -1,6 +1,6 @@
 {
-  "buildCommand": "pnpm install && pnpm --filter @workspace/agency-engine run build",
-  "outputDirectory": "artifacts/agency-engine/dist",
+  "buildCommand": "pnpm install && pnpm --filter @workspace/agency-engine run build && cp -r artifacts/agency-engine/dist ./dist",
+  "outputDirectory": "dist",
   "framework": null,
   "env": {
     "BASE_PATH": "/"
